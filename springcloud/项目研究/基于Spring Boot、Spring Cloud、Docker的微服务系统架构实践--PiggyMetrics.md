@@ -2,7 +2,7 @@
 
 原文/项目 地址：[https://github.com/sqshq/PiggyMetrics](https://github.com/sqshq/PiggyMetrics)
 
-
+翻译转自:http://blog.csdn.net/rickiyeat/article/details/60792925
 
 这个项目的名字叫：Piggy Metrics，一个供个人处理财务的解决方案。
 
