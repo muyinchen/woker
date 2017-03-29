@@ -260,7 +260,7 @@ public static boolean  resize(String   pic,String   picTo,int width,int height) 
     }
 ```
 
-我使用上面的程序处理不好使。然后查到下面的blog看到了如下内容。问题被解决。^-^
+我使用上面的程序处理不好使。然后通过搜索相关文章看到了如下内容。问题被解决。^-^
 
 ```java
 
