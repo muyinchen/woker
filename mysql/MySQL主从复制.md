@@ -21,9 +21,9 @@ mysql>GRANT REPLICATION SLAVE ON *.* TO ‘backup’@’192.168.1.101‘ IDENTIF
 
 **log_bin = /var/log/mysql/mysql-bin.log   #确保此文件可写，开启bin-log**
 
-**read-only =0  #主机，读写都可以**
-**binlog-do-db  =test   #需要备份数据，多个写多行**
-**binlog-ignore-db =mysql #不需要备份的数据库，多个写多行**
+**read-only =0  #主机，读写都可以**<br>
+**binlog-do-db  =test   #需要备份数据，多个写多行**<br>
+**binlog-ignore-db =mysql #不需要备份的数据库，多个写多行**<br>
 
 可以通过`mysql>show variables like 'log_%';` 验证二进制日志是否已经启动。
 
@@ -74,15 +74,15 @@ Query OK, 0 rows affected (0.28 sec)
 ### 6、修改从数据库的my.cnf，增加server-id参数，指定复制使用的用户，主数据库服务器的ip，端口以及开始执行复制日志的文件和位置。
 
 打开从机`B`的`my.cnf`，输入
-**server-id   = 2**
-**log_bin    = /var/log/mysql/mysql-bin.log**
-**master-host     =192.168.1.100**
-**master-user     =backup**
-**master-pass     =123456**
-**master-port     =3306**
-**master-connect-retry=60 #如果从服务器发现主服务器断掉，重新连接的时间差(秒)**
-**replicate-do-db =test #只复制某个库**
-**replicate-ignore-db=mysql #不复制某个库**
+**server-id   = 2**<br>
+**log_bin    = /var/log/mysql/mysql-bin.log**<br>
+**master-host     =192.168.1.100**<br>
+**master-user     =backup**<br>
+**master-pass     =123456**<br>
+**master-port     =3306**<br>
+**master-connect-retry=60 #如果从服务器发现主服务器断掉，重新连接的时间差(秒)**<br>
+**replicate-do-db =test #只复制某个库**<br>
+**replicate-ignore-db=mysql #不复制某个库**<br>
 
 ### 7、在从服务器上,启动slave进程
 ```mysql
