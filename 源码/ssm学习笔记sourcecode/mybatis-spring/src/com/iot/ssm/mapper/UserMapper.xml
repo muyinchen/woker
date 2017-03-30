@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ namespace 命名空间，作用就是对sql进行分类化管理,理解为sql隔离
+ 注意：使用mapper代理方法开发，namespace有特殊重要的作用
+ -->
+<mapper namespace="com.iot.ssm.mapper.UserMapper">
+
+    <!-- 在映射文件中配置很多sql语句 -->
+
+    <select id="findUserById" parameterType="int" resultType="user">
+        SELECT * FROM user WHERE id=#{value}
+    </select>
+
+</mapper>

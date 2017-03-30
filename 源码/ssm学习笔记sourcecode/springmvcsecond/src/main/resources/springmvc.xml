@@ -1,0 +1,41 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+    <!-- 对于注解的Handler 可以单个配置
+     实际开发中加你使用组件扫描
+     -->
+    <!--  <bean  class="com.iot.ssm.controller.ItemsController3"/> -->
+    <!-- 可以扫描controller、service、...
+	这里让扫描controller，指定controller的包
+	 -->
+    <context:component-scan base-package="com.iot.ssm.controller"></context:component-scan>
+
+    <!-- 注解的映射器 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping"/>
+
+    <!-- 注解的适配器 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"/>
+
+    <!-- 使用mvc:annotation-driven代替上面两个注解映射器和注解适配的配置
+     mvc:annotation-driven默认加载很多的参数绑定方法，
+     比如json转换解析器默认加载了，如果使用mvc:annotation-driven则不用配置上面的RequestMappingHandlerMapping和RequestMappingHandlerAdapter
+     实际开发时使用mvc:annotation-driven
+     -->
+    <mvc:annotation-driven></mvc:annotation-driven>
+
+    <!-- 视图解析器
+    解析jsp,默认使用jstl,classpath下要有jstl的包
+    -->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <!-- 配置jsp路径的前缀 -->
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <!-- 配置jsp路径的后缀 -->
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+</beans>

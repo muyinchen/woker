@@ -1,0 +1,62 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+
+
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+
+    <!-- 加载配置文件 -->
+    <context:property-placeholder location="classpath:db.properties"/>
+
+    <!-- 数据源，使用dbcp -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+          destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="maxActive" value="10"/>
+        <property name="maxIdle" value="5"/>
+    </bean>
+
+    <!-- sqlSessinFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 加载mybatis的配置文件 -->
+        <property name="configLocation" value="mybatis/SqlMapConfig.xml"/>
+        <!-- 数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 原始dao接口 -->
+
+    <bean id="userDao" class="com.iot.ssm.dao.UserDaoImpl">
+        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- mapper配置
+    MapperFactoryBean：根据mapper接口生成代理对象
+    -->
+
+    <!-- <bean id="userMapper" class="org.ssm.spring.mapper.MapperFactoryBean">
+        //mapperInterface指定mapper接口
+        <property name="mapperInterface" value="com.iot.ssm.mapper.UserMapper"/>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    </bean>-->
+
+    <!-- mapper批量扫描，从mapper包中扫描出mapper接口，自动创建代理对象并且在spring容器中注册
+    遵循规范：将mapper.java和mapper.xml映射文件名称保持一致，且在一个目录 中
+    自动扫描出来的mapper的bean的id为mapper类名（首字母小写）
+    -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 指定扫描的包名
+        如果扫描多个包，每个包中间使用半角逗号分隔
+        -->
+        <property name="basePackage" value="com.iot.ssm.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+
+    </bean>
+
+</beans>

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace命名空间，作用就是对sql进行分类化管理，理解sql隔离
+注意：使用mapper代理方法开发，namespace有特殊重要的作用，namespace等于mapper接口地址
+-->
+<mapper namespace="com.iot.mybatis.mapper.OrdersMapperCustom">
+
+    <!-- 订单查询关联用户的resultMap
+	将整个查询的结果映射到com.iot.mybatis.po.Orders中
+	 -->
+    <resultMap type="com.iot.mybatis.po.Orders" id="OrdersUserResultMap">
+        <!-- 配置映射的订单信息 -->
+        <!-- id：指定查询列中的唯一标识，订单信息的中的唯 一标识，如果有多个列组成唯一标识，配置多个id
+            column：订单信息的唯一标识列
+            property：订单信息的唯一标识列所映射到Orders中哪个属性
+          -->
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="number" property="number"/>
+        <result column="createtime" property="createtime"/>
+        <result column="note" property="note"/>
+
+        <!-- 配置映射的关联的用户信息 -->
+        <!-- association：用于映射关联查询单个对象的信息
+        property：要将关联查询的用户信息映射到Orders中哪个属性
+         -->
+        <association property="user" javaType="com.iot.mybatis.po.User">
+            <!-- id：关联查询用户的唯 一标识
+            column：指定唯 一标识用户信息的列
+            javaType：映射到user的哪个属性
+             -->
+            <id column="user_id" property="id"/>
+            <result column="username" property="username"/>
+            <result column="sex" property="sex"/>
+            <result column="address" property="address"/>
+        </association>
+    </resultMap>
+
+    <!-- 订单及订单明细的resultMap
+	使用extends继承，不用在中配置订单信息和用户信息的映射
+	 -->
+    <resultMap type="com.iot.mybatis.po.Orders" id="OrdersAndOrderDetailResultMap" extends="OrdersUserResultMap">
+        <!-- 订单信息 -->
+        <!-- 用户信息 -->
+        <!-- 使用extends继承，不用在中配置订单信息和用户信息的映射 -->
+
+        <!-- 订单明细信息
+        一个订单关联查询出了多条明细，要使用collection进行映射
+        collection：对关联查询到多条记录映射到集合对象中
+        property：将关联查询到多条记录映射到com.iot.mybatis.po.Orders哪个属性
+        ofType：指定映射到list集合属性中pojo的类型
+         -->
+        <collection property="orderdetails" ofType="com.iot.mybatis.po.Orderdetail">
+            <!-- id：订单明细唯 一标识
+            property:要将订单明细的唯 一标识 映射到com.iot.mybatis.po.Orderdetail的哪个属性
+              -->
+            <id column="orderdetail_id" property="id"/>
+            <result column="items_id" property="itemsId"/>
+            <result column="items_num" property="itemsNum"/>
+            <result column="orders_id" property="ordersId"/>
+        </collection>
+
+    </resultMap>
+
+    <!-- 查询用户及购买的商品 -->
+    <resultMap type="com.iot.mybatis.po.User" id="UserAndItemsResultMap">
+        <!-- 用户信息 -->
+        <id column="user_id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="sex" property="sex"/>
+        <result column="address" property="address"/>
+
+        <!-- 订单信息
+        一个用户对应多个订单，使用collection映射
+         -->
+        <collection property="ordersList" ofType="com.iot.mybatis.po.Orders">
+            <id column="id" property="id"/>
+            <result column="user_id" property="userId"/>
+            <result column="number" property="number"/>
+            <result column="createtime" property="createtime"/>
+            <result column="note" property="note"/>
+
+            <!-- 订单明细
+             一个订单包括 多个明细
+             -->
+            <collection property="orderdetails" ofType="com.iot.mybatis.po.Orderdetail">
+                <id column="orderdetail_id" property="id"/>
+                <result column="items_id" property="itemsId"/>
+                <result column="items_num" property="itemsNum"/>
+                <result column="orders_id" property="ordersId"/>
+
+                <!-- 商品信息
+                 一个订单明细对应一个商品
+                 -->
+                <association property="items" javaType="com.iot.mybatis.po.Items">
+                    <id column="items_id" property="id"/>
+                    <result column="items_name" property="name"/>
+                    <result column="items_detail" property="detail"/>
+                    <result column="items_price" property="price"/>
+                </association>
+
+            </collection>
+
+        </collection>
+
+    </resultMap>
+
+    <!-- 查询订单关联查询用户信息 -->
+    <select id="findOrdersUser" resultType="com.iot.mybatis.po.OrdersCustom">
+        SELECT
+        orders.*,
+        user.username,
+        user.sex,
+        user.address
+        FROM
+        orders,
+        user
+        WHERE orders.user_id = user.id
+    </select>
+
+    <!-- 查询订单关联查询用户信息 -->
+    <select id="findOrdersUserResultMap" resultMap="OrdersUserResultMap">
+        SELECT
+        orders.*,
+        user.username,
+        user.sex,
+        user.address
+        FROM
+        orders,
+        user
+        WHERE orders.user_id = user.id
+    </select>
+
+    <!-- 查询订单关联查询用户及订单明细，使用resultmap -->
+    <select id="findOrdersAndOrderDetailResultMap" resultMap="OrdersAndOrderDetailResultMap">
+        SELECT
+        orders.*,
+        user.username,
+        user.sex,
+        user.address,
+        orderdetail.id orderdetail_id,
+        orderdetail.items_id,
+        orderdetail.items_num,
+        orderdetail.orders_id
+        FROM
+        orders,
+        user,
+        orderdetail
+        WHERE orders.user_id = user.id AND orderdetail.orders_id=orders.id
+    </select>
+
+    <!-- 查询用户及购买的商品信息，使用resultmap -->
+    <select id="findUserAndItemsResultMap" resultMap="UserAndItemsResultMap">
+        SELECT
+        orders.*,
+        user.username,
+        user.sex,
+        user.address,
+        orderdetail.id orderdetail_id,
+        orderdetail.items_id,
+        orderdetail.items_num,
+        orderdetail.orders_id,
+        items.name items_name,
+        items.detail items_detail,
+        items.price items_price
+        FROM
+        orders,
+        user,
+        orderdetail,
+        items
+        WHERE orders.user_id = user.id AND orderdetail.orders_id=orders.id AND orderdetail.items_id = items.id
+    </select>
+
+    <!-- 查询订单关联查询用户，用户信息需要延迟加载 -->
+    <select id="findOrdersUserLazyLoading" resultMap="OrdersUserLazyLoadingResultMap">
+        SELECT * FROM orders
+    </select>
+
+    <!-- 延迟加载的resultMap -->
+    <resultMap type="com.iot.mybatis.po.Orders" id="OrdersUserLazyLoadingResultMap">
+        <!--对订单信息进行映射配置  -->
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="number" property="number"/>
+        <result column="createtime" property="createtime"/>
+        <result column="note" property="note"/>
+        <!-- 实现对用户信息进行延迟加载
+        select：指定延迟加载需要执行的statement的id（是根据user_id查询用户信息的statement）
+        要使用userMapper.xml中findUserById完成根据用户id(user_id)用户信息的查询，如果findUserById不在本mapper中需要前边加namespace
+        column：订单信息中关联用户信息查询的列，是user_id
+        关联查询的sql理解为：
+        SELECT orders.*,
+        (SELECT username FROM USER WHERE orders.user_id = user.id)username,
+        (SELECT sex FROM USER WHERE orders.user_id = user.id)sex
+         FROM orders
+         -->
+        <association property="user" javaType="com.iot.mybatis.po.User"
+                     select="com.iot.mybatis.mapper.UserMapper.findUserById"
+                     column="user_id">
+            <!-- 实现对用户信息进行延迟加载 -->
+
+        </association>
+
+    </resultMap>
+
+</mapper>

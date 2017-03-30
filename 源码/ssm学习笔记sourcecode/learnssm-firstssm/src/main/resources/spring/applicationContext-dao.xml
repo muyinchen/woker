@@ -1,0 +1,42 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+    <!-- 加载db.properties文件中的内容，db.properties文件中key命名要有一定的特殊规则 -->
+    <context:property-placeholder location="classpath:db.properties"/>
+    <!-- 配置数据源 ，dbcp -->
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="maxActive" value="30"/>
+        <property name="maxIdle" value="5"/>
+    </bean>
+
+    <!-- 从整合包里找，org.mybatis:mybatis-spring:1.2.4 -->
+    <!-- sqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 数据库连接池 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 加载mybatis的全局配置文件 -->
+        <property name="configLocation" value="classpath:mybatis/sqlMapConfig.xml"/>
+        <!-- <property name="mapperLocations" value="classpath:com/iot/learnssm/firstssm/mapper/*.xml"/>-->
+    </bean>
+
+    <!-- mapper扫描器 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 扫描包路径，如果需要扫描多个包，中间使用半角逗号隔开 -->
+        <property name="basePackage" value="com.iot.learnssm.firstssm.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <!-- <property name="sqlSessionFactory" ref="sqlSessionFactory" />
+        会导致数据源配置不管用，数据库连接不上。
+        且spring 4弃用
+        -->
+    </bean>
+
+</beans>

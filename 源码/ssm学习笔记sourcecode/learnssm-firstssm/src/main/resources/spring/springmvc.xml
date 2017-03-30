@@ -1,0 +1,107 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+    <!-- 对于注解的Handler 可以单个配置
+     实际开发中加你使用组件扫描
+     -->
+    <!-- 可以扫描controller、service、...
+	这里让扫描controller，指定controller的包
+	 -->
+    <context:component-scan base-package="com.iot.learnssm.firstssm.controller"></context:component-scan>
+
+    <!-- 静态资源解析
+        包括 ：js、css、img、..
+         -->
+    <mvc:resources location="/js/" mapping="/js/**"/>
+
+    <!-- 使用mvc:annotation-driven代替上面两个注解映射器和注解适配的配置
+     mvc:annotation-driven默认加载很多的参数绑定方法，
+     比如json转换解析器默认加载了，如果使用mvc:annotation-driven则不用配置上面的RequestMappingHandlerMapping和RequestMappingHandlerAdapter
+     实际开发时使用mvc:annotation-driven
+     -->
+    <mvc:annotation-driven conversion-service="conversionService"
+                           validator="validator">
+    </mvc:annotation-driven>
+
+    <!-- 视图解析器
+    解析jsp,默认使用jstl,classpath下要有jstl的包
+    -->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <!-- 配置jsp路径的前缀 -->
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <!-- 配置jsp路径的后缀 -->
+        <property name="suffix" value=".jsp"/>
+    </bean>
+    <!-- 自定义参数绑定 -->
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+        <!-- 转换器 -->
+        <property name="converters">
+            <list>
+                <!-- 日期类型转换 -->
+                <bean class="com.iot.learnssm.firstssm.controller.converter.CustomDateConverter"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 校验器 -->
+    <bean id="validator"
+          class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+        <!-- hibernate校验器-->
+        <property name="providerClass" value="org.hibernate.validator.HibernateValidator"/>
+        <!-- 指定校验使用的资源文件，在文件中配置校验错误信息，如果不指定则默认使用classpath下的ValidationMessages.properties -->
+        <property name="validationMessageSource" ref="messageSource"/>
+    </bean>
+    <!-- 校验错误信息配置文件 -->
+    <bean id="messageSource"
+          class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <!-- 资源文件名-->
+        <property name="basenames">
+            <list>
+                <value>classpath:CustomValidationMessages</value>
+            </list>
+        </property>
+        <!-- 资源文件编码格式 -->
+        <property name="fileEncodings" value="utf-8"/>
+        <!-- 对资源文件内容缓存时间，单位秒 -->
+        <property name="cacheSeconds" value="120"/>
+    </bean>
+
+    <!-- 全局异常处理器
+	只要实现HandlerExceptionResolver接口就是全局异常处理器
+	 -->
+    <bean class="com.iot.learnssm.firstssm.exception.CustomExceptionResolver"></bean>
+
+    <!-- 文件上传 -->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <!-- 设置上传文件的最大尺寸为5MB -->
+        <property name="maxUploadSize">
+            <value>5242880</value>
+        </property>
+    </bean>
+
+    <!--拦截器 -->
+    <mvc:interceptors>
+        <!--多个拦截器,顺序执行 -->
+        <!-- 登陆认证拦截器 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="com.iot.learnssm.firstssm.interceptor.LoginInterceptor"></bean>
+        </mvc:interceptor>
+        <mvc:interceptor>
+            <!-- /**表示所有url包括子url路径 -->
+            <mvc:mapping path="/**"/>
+            <bean class="com.iot.learnssm.firstssm.interceptor.HandlerInterceptor1"></bean>
+        </mvc:interceptor>
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="com.iot.learnssm.firstssm.interceptor.HandlerInterceptor2"></bean>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+</beans>
