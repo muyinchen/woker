@@ -803,3 +803,593 @@ public interface Delete {
 }
 ```
 
+#### 19 Table接口
+
+```java
+public interface Table<T> {
+    TableMetaData getMeta();
+
+    Query<T> createQuery();
+
+    Update<T> createUpdate();
+
+    Insert<T> createInsert();
+
+    Delete createDelete();
+}
+
+```
+
+#### 20 数据库操作接口
+
+```java
+public interface Database {
+
+    /**
+     * 获取数据库定义对象
+     *
+     * @return 数据库定义对象
+     */
+    DatabaseMetaData getMeta();
+
+    /**
+     * 获取一个表操作接口,如果数据库定义对象里未找到表结构定义,则尝试使用{@link TableMetaParser#parse(String)}进行解析
+     *
+     * @param name 表名
+     * @param <T>  表数据泛型
+     * @return 表操作接口
+     */
+    <T> Table<T> getTable(String name);
+
+    /**
+     * 创建表,在数据库中创建表,如果表已存在,将不进行任何操作
+     *
+     * @param tableMetaData 表结构定义
+     * @param <T>           表数据泛型
+     * @return 表操作接口
+     * @throws SQLException 创建异常信息
+     */
+    <T> Table<T> createTable(TableMetaData tableMetaData) throws SQLException;
+
+    /**
+     * 重新载入结构定义,此操作不会对数据库表结构进行任何操作
+     *
+     * @param tableMetaData 表结构定义
+     * @param <T>           表数据泛型
+     * @return 表操作接口
+     */
+    <T> Table<T> reloadTable(TableMetaData tableMetaData);
+
+    <T> Table<T> alterTable(TableMetaData tableMetaData);
+
+    /**
+     * 删除表,此操作只会删除结构定义,不会删除物理数据库中的表
+     *
+     * @param name 表名
+     * @return
+     */
+    boolean removeTable(String name);
+
+}
+```
+
+#### 21 SimpleDatabase简单实现
+
+```java
+public class SimpleDatabase implements Database {
+    private ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    private DatabaseMetaData metaData;
+    private SqlExecutor sqlExecutor;
+    private TableMetaParser tableMetaParser;
+
+    public SimpleDatabase(DatabaseMetaData metaData, SqlExecutor sqlExecutor) {
+        this.metaData = metaData;
+        this.sqlExecutor = sqlExecutor;
+    }
+
+    protected Map<String, Table> cache = new HashMap<>();
+
+    @Override
+    public DatabaseMetaData getMeta() {
+        return metaData;
+    }
+
+    @Override
+    public <T> Table<T> getTable(String name) {
+        Table table;
+        TableMetaData tableMetaData = metaData.getTable(name);
+        if (tableMetaData == null) {
+            if (tableMetaParser != null)
+                tableMetaData = tableMetaParser.parse(name);
+            if (tableMetaData != null) {
+                metaData.putTable(tableMetaData);
+            } else
+                throw new NullPointerException("表不存在!");
+        }
+        try {
+            readWriteLock.readLock().lock();
+            table = cache.get(name);
+            if (null != table) return table;
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
+        if (table == null) {
+            try {
+                readWriteLock.writeLock().lock();
+                ObjectWrapper wrapper;
+                ObjectWrapperFactory factory = metaData.getObjectWrapperFactory();
+                if (factory != null) {
+                    wrapper = factory.createObjectWrapper(tableMetaData);
+                } else {
+                    wrapper = new AdvancedMapWrapper(tableMetaData);
+                }
+                table = new SimpleTable(tableMetaData, this, sqlExecutor, wrapper);
+                cache.put(name, table);
+            } finally {
+                readWriteLock.writeLock().unlock();
+            }
+        }
+        return table;
+    }
+
+    @Override
+    public <T> Table<T> createTable(TableMetaData tableMetaData) throws SQLException {
+        SimpleQuery.TotalWrapper wrapper = new SimpleQuery.TotalWrapper();
+        try {
+            sqlExecutor.single(new SimpleSQL(tableMetaData, "select count(0) from " + tableMetaData.getName() + " where 1=2", new Object()), wrapper);
+        } catch (Exception e) {
+            SqlRender render = metaData.getRenderer(SqlRender.TYPE.META_CREATE);
+            SQL sql = render.render(tableMetaData, new Object());
+            sqlExecutor.exec(sql);
+            metaData.putTable(tableMetaData);
+        }
+        return getTable(tableMetaData.getName());
+    }
+
+    @Override
+    public <T> Table<T> reloadTable(TableMetaData tableMetaData) {
+        try {
+            readWriteLock.writeLock().lock();
+            cache.remove(tableMetaData.getName());
+            cache.remove(tableMetaData.getAlias());
+            metaData.putTable(tableMetaData);
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
+        return getTable(tableMetaData.getAlias());
+    }
+
+    @Override
+    public <T> Table<T> alterTable(TableMetaData tableMetaData) {
+        throw new UnsupportedOperationException("开发进行中");
+    }
+
+    @Override
+    public boolean removeTable(String name) {
+        try {
+            readWriteLock.writeLock().lock();
+            return metaData.remove(name) != null;
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
+    }
+
+    public void setTableMetaParser(TableMetaParser tableMetaParser) {
+        this.tableMetaParser = tableMetaParser;
+    }
+
+    public Map<String, Object> getTriggerContextRoot() {
+        return new HashMap<>();
+    }
+}
+```
+
+#### 22 SimpleTable简单实现
+
+```java
+class SimpleTable<T> implements Table<T> {
+    private TableMetaData metaData;
+
+    private SqlExecutor sqlExecutor;
+
+    private ObjectWrapper objectWrapper;
+
+    private SimpleDatabase database;
+
+    public SimpleTable(TableMetaData metaData, SimpleDatabase database, SqlExecutor sqlExecutor, ObjectWrapper objectWrapper) {
+        this.metaData = metaData;
+        this.sqlExecutor = sqlExecutor;
+        this.objectWrapper = objectWrapper;
+        this.database = database;
+    }
+
+    @Override
+    public TableMetaData getMeta() {
+        return metaData;
+    }
+
+    @Override
+    public Query createQuery() {
+        return new SimpleQuery<>(this, sqlExecutor, objectWrapper);
+    }
+
+    @Override
+    public Update createUpdate() {
+        return new SimpleUpdate<>(this, sqlExecutor);
+    }
+
+    @Override
+    public Delete createDelete() {
+        return new SimpleDelete(this, sqlExecutor);
+    }
+
+    @Override
+    public Insert<T> createInsert() {
+        return new SimpleInsert<>(this, sqlExecutor);
+    }
+
+    public SimpleDatabase getDatabase() {
+        return database;
+    }
+}
+```
+
+#### 23 SimpleMapWrapper对ObjectWrapper<Map<String, Object>>的简单实现
+
+```java
+public class SimpleMapWrapper implements ObjectWrapper<Map<String, Object>> {
+    @Override
+    public Map<String, Object> newInstance() {
+        return new LinkedHashMap<>();
+    }
+
+    @Override
+    public void wrapper(Map<String, Object> instance, int index, String attr, Object value) {
+        if ("ROWNUM_".equals(attr.toUpperCase())) return;
+        putValue(instance, attr, value);
+    }
+
+    @Override
+    public void done(Map<String, Object> instance) {
+
+    }
+
+    public void putValue(Map<String, Object> instance, String attr, Object value) {
+        if (attr.contains(".")) {
+            String[] attrs = StringUtils.splitFirst(attr, "[.]");
+            String attr_ob_name = attrs[0];
+            String attr_ob_attr = attrs[1];
+            Object object = instance.get(attr_ob_name);
+            if (object == null) {
+                object = newInstance();
+                instance.put(attr_ob_name, object);
+            }
+            if (object instanceof Map) {
+                Map<String, Object> objectMap = (Map) object;
+                putValue(objectMap, attr_ob_attr, value);
+            }
+        } else {
+            instance.put(attr, value);
+        }
+    }
+}
+```
+
+
+
+
+
+#### 24  PropertyWrapper接口
+
+```java
+public interface PropertyWrapper extends Serializable {
+    <T> T getValue();
+
+    String toString();
+
+    int toInt();
+
+    double toDouble();
+
+    boolean isTrue();
+
+    Date toDate();
+
+    Date toDate(String format);
+
+    Map<String, Object> toMap();
+
+    List<Map> toList();
+
+    <T> T toBean(Class<T> type);
+
+    <T> List<T> toBeanList(Class<T> type);
+
+    boolean isNullOrEmpty();
+
+    boolean valueTypeOf(Class<?> type);
+}
+
+```
+
+#### 25 SimplePropertyWrapper简单实现
+
+```java
+public class SimplePropertyWrapper implements PropertyWrapper {
+
+    private Object value;
+
+    public SimplePropertyWrapper(Object value) {
+        this.value = value;
+    }
+
+    @Override
+    public <T> T getValue() {
+        return (T) value;
+    }
+
+    @Override
+    public int toInt() {
+        return StringUtils.toInt(value);
+    }
+
+    @Override
+    public double toDouble() {
+        return StringUtils.toDouble(value);
+    }
+
+    @Override
+    public boolean isTrue() {
+        return StringUtils.isTrue(value);
+    }
+
+    @Override
+    public Date toDate() {
+        if (value instanceof Date) return ((Date) value);
+        return DateTimeUtils.formatUnknownString2Date(toString());
+    }
+
+    @Override
+    public Date toDate(String format) {
+        if (value instanceof Date) return ((Date) value);
+        return DateTimeUtils.formatDateString(toString(), format);
+    }
+
+    @Override
+    public <T> T toBean(Class<T> type) {
+        if (valueTypeOf(type)) return ((T) getValue());
+        return JSON.parseObject(toString(), type);
+    }
+
+    @Override
+    public List<Map> toList() {
+        return toBeanList(Map.class);
+    }
+
+    @Override
+    public Map<String, Object> toMap() {
+        return toBean(Map.class);
+    }
+
+    @Override
+    public <T> List<T> toBeanList(Class<T> type) {
+        if (getValue() instanceof List) return ((List) getValue());
+        return JSON.parseArray(toString(), type);
+    }
+
+    @Override
+    public boolean isNullOrEmpty() {
+        return StringUtils.isNullOrEmpty(value);
+    }
+
+    @Override
+    public boolean valueTypeOf(Class<?> type) {
+        if (value == null) return false;
+        return ClassUtils.instanceOf(value.getClass(), type);
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
+
+}
+```
+
+#### 26 Converter接口
+
+```java
+public interface Converter {
+    Object getValue(Object value);
+}
+
+```
+
+#### 27 ValueConverter接口
+
+```java
+public interface ValueConverter {
+    Object getData(Object value);
+
+    Object getValue(Object data);
+}
+```
+
+#### 28 DefaultValueConverter默认实现
+
+```java
+public class DefaultValueConverter implements ValueConverter {
+    @Override
+    public Object getData(Object value) {
+        return value;
+    }
+
+    @Override
+    public Object getValue(Object data) {
+        return data;
+    }
+}
+```
+
+#### 29 AdvancedMapWrapper对简单实现的增强
+
+```java
+public class AdvancedMapWrapper extends SimpleMapWrapper {
+    private TableMetaData tableMetaData;
+
+    public AdvancedMapWrapper(TableMetaData tableMetaData) {
+        this.tableMetaData = tableMetaData;
+    }
+
+    @Override
+    public void wrapper(Map<String, Object> instance, int index, String attr, Object value) {
+        FieldMetaData metaData = tableMetaData.findFieldByName(attr);
+        if (null != metaData) {
+            ValueConverter valueConverter = metaData.getValueConverter();
+            super.wrapper(instance, index, attr, valueConverter.getValue(value));
+            ValueConverter converter = metaData.getValueConverter();
+            value = converter.getValue(value);
+            OptionConverter optionConverter = metaData.getOptionalMapper();
+            if (optionConverter != null) {
+                Object value1 = optionConverter.converterValue(value);
+                putValue(instance, optionConverter.getFieldName(), value1);
+            }
+        } else {
+            super.wrapper(instance, index, attr, value);
+        }
+    }
+}
+```
+#### 30 验证器接口Validator
+
+```java
+public interface Validator {
+    boolean validate(Object data) throws ValidationException;
+}
+```
+
+#### 31 验证器工厂接口ValidatorFactory
+
+```java
+public interface ValidatorFactory {
+    Validator createValidator(TableMetaData tableMetaData);
+}
+```
+
+#### 32 关联关系定义类
+
+```java
+public class Correlation {
+
+    public Correlation() {
+    }
+
+    public Correlation(String target, String alias, String condition) {
+        this.targetTable = target;
+        this.alias = alias;
+        terms = new ArrayList<>();
+        Term term = new Term();
+        term.setTermType(TermType.func);
+        term.setField(condition);
+        term.setValue(condition);
+        terms.add(term);
+    }
+
+    private String targetTable;
+
+    private String alias;
+
+    private boolean one2one = true;
+
+    private List<Term> terms;
+
+    private JOIN join = JOIN.LEFT;
+
+    public String getTargetTable() {
+        return targetTable;
+    }
+
+    public void setTargetTable(String targetTable) {
+        this.targetTable = targetTable;
+    }
+
+    public String getAlias() {
+        if (alias == null) alias = targetTable;
+        return alias;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
+    }
+
+    public boolean isOne2one() {
+        return one2one;
+    }
+
+    public void setOne2one(boolean one2one) {
+        this.one2one = one2one;
+    }
+
+    public List<Term> getTerms() {
+        return terms;
+    }
+
+    public void setTerms(List<Term> terms) {
+        this.terms = terms;
+    }
+
+    public JOIN getJoin() {
+        return join;
+    }
+
+    public void setJoin(JOIN join) {
+        this.join = join;
+    }
+
+    public Correlation leftJoin() {
+        this.join = JOIN.LEFT;
+        return this;
+    }
+
+    public Correlation rightJoin() {
+        this.join = JOIN.RIGHT;
+        return this;
+    }
+
+    public Correlation InnerJoin() {
+        this.join = JOIN.INNER;
+        return this;
+    }
+
+    public Correlation FullJoin() {
+        this.join = JOIN.FULL;
+        return this;
+    }
+
+    public enum JOIN {
+        LEFT {
+            @Override
+            public String toString() {
+                return "LEFT JOIN";
+            }
+        }, RIGHT {
+            @Override
+            public String toString() {
+                return "RIGHT JOIN";
+            }
+        }, FULL {
+            @Override
+            public String toString() {
+                return "FULL JOIN";
+            }
+        }, INNER {
+            @Override
+            public String toString() {
+                return "JOIN";
+            }
+        }
+    }
+
+}
+```
+
