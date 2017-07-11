@@ -69,7 +69,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
         else {
             V oldVal = null;
             // 针对通过hash找到的这个节点进行加锁操作，而不是segment，进一步减少线程冲突
-            // 单个数组添加元素当然要保证线程安全
+            // 单个链表添加元素当然要保证线程安全
             synchronized (f) {
                 if (tabAt(tab, i) == f) {
                     if (fh >= 0) {
