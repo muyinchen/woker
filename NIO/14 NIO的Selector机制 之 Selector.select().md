@@ -191,4 +191,4 @@ sun.nio.ch包下面所有的类库可以在这里看到：http://www.docjar.com/
 
 2、selector.selectedKey()方法返回的Set集合中的值是何时添加进去的，以及SelectionKey类相关的一些操作的具体实现。
 
-这就是两块比较重要内容，这对理解整个的Java NIO有很大帮助，因此，自己也会在最近的时间来啃以上相关的内容。
+这就是两块比较重要内容，这对理解整个的Java NIO有很大帮助。

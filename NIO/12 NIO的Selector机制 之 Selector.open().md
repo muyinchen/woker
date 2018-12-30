@@ -145,3 +145,6 @@ void initInterrupt(int var1, int var2) {
 主要完成建立Pipe，并把pipe的读写文件描述符放入pollArray中,这个pollArray是Selector的枢纽。Linux下则是直接使用系统的pipe。 
 下面附图展示Selector工作原理： 
 ![](https://github.com/muyinchen/woker/blob/master/mypics/timg.jpg?raw=true)
+
+![](https://github.com/muyinchen/woker/blob/master/mypics/selector%20%E6%95%B4%E4%BD%93%E5%9B%BE.jpg?raw=true)
+

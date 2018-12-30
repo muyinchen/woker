@@ -164,6 +164,4 @@ protected void implRegister(SelectionKeyImpl var1) {
 这里var1是当前channel的selectionKey。这里面最重要的变量也就是： 
 fdMap这个变量和keys变量。 
 
-这里我怀疑，当我们执行select()函数的时候，可能就是遍历里面的内容。当然仅仅是怀疑，具体的还要分析select()函数的源码。
-
 
