@@ -68,7 +68,7 @@ NIO规定了，在阻塞IO的语句前后，需要调用begin()和end()方法，
              public void interrupt(Thread target) {
                  synchronized (closeLock) {
                      // 如果当前Channel已经关闭，则直接返回
-                    if (!open)
+                    if (!open) // 在JDK11中已经换为closed来做这个状态维护了
                          return;
                     // 设置标志位，同时登记被中断的线程
                     open = false;
@@ -192,7 +192,6 @@ begin()方法负责添加Channel的中断处理器到当前线程。end()是在I
         throw new ClosedByInterruptException();
     }
      // 如果这次没有读取到数据，并且Channel被另外一个线程关闭了，则排除Channel被异步关闭的异常
-     // 但是如果这次读取到了数据，就不能抛出异常，因为这次读取的数据是有效的，需要返回给用户的(重要逻辑)
      if (!completed && !open)
          throw new AsynchronousCloseException();
  }
@@ -376,3 +375,5 @@ public SocketChannel accept() throws IOException {
 
 
 本文来源: http://imushan.com/2018/08/01/java/language/JDK%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB-InterruptibleChannel%E4%B8%8E%E5%8F%AF%E4%B8%AD%E6%96%ADIO/
+
+其中的部分错误，本人已经修正
