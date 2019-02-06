@@ -16,7 +16,7 @@ Bytebuffer分为两种：间接地和直接的，所谓直接就是指MappedByte
 
 首先，“映射”这个词，就和数学课上说的“一一映射”是一个意思，就是建立一种一一对应关系，在这里主要是只 硬盘上文件 的位置与进程 逻辑地址空间 中一块大小相同的区域之间的一一对应，如图1中过程1所示。这种对应关系纯属是逻辑上的概念，物理上是不存在的，原因是进程的逻辑地址空间本身就是不存在的。在内存映射的过程中，并没有实际的数据拷贝，文件没有被载入内存，只是逻辑上被放入了内存，具体到代码，就是建立并初始化了相关的数据结构（struct address_space），这个过程有系统调用mmap()实现，所以建立内存映射的效率很高。
 
- ![img](http://hi.csdn.net/attachment/201009/17/0_1284702135HcPp.gif)
+ ![img](https://github.com/muyinchen/woker/blob/master/mypics/%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E5%8E%9F%E7%90%86.gif?raw=true)
 
 ​											图1.内存映射原理  
 
@@ -40,6 +40,6 @@ mmap()会返回一个指针ptr，它指向进程逻辑地址空间中的一个�
 
  
 
-![img](http://hi.csdn.net/attachment/201009/17/0_1284702221pRyi.gif)
+![img](https://github.com/muyinchen/woker/blob/master/mypics/read%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86.gif?raw=true)
 
 图2.read系统调用原理
