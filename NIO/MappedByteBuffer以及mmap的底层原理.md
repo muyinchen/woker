@@ -42,4 +42,5 @@ mmap()会返回一个指针ptr，它指向进程逻辑地址空间中的一个�
 
 ![img](https://github.com/muyinchen/woker/blob/master/mypics/read%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86.gif?raw=true)
 
-图2.read系统调用原理
+​											图2.read系统调用原理
+
